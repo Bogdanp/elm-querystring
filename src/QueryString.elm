@@ -5,6 +5,8 @@ module QueryString
         , empty
         , render
         , add
+        , addList
+        , addMaybe
         , remove
         , filter
         , all
@@ -42,7 +44,7 @@ And you can parse and extract their parameters:
 @docs parse, empty
 
 ## Manipulating parameters
-@docs render, add, remove, filter
+@docs render, add, addList, addMaybe, remove, filter
 
 ## Extracting parameters
 @docs all, one, many
@@ -203,6 +205,55 @@ add k v (QueryString qs) =
     in
         Dict.update k prepend qs
             |> QueryString
+
+
+{-| Add a list of values to a key.
+
+    > parse "?a=1&b=a&a=c"
+    |   |> addList "a" [ "2", "3" ]
+    |   |> render
+    "?a=3&a=2&a=1&a=c&b=a" : String
+
+    > parse "?a=1&b=a&a=c"
+    |   |> addList "d" [ "hello", "world" ]
+    |   |> render
+    "?a=1&a=c&b=a&d=world&d=hello" : String
+
+-}
+addList : String -> List String -> QueryString -> QueryString
+addList k l qs =
+    case l of
+        [] ->
+            qs
+
+        v :: vs ->
+            add k v qs |> addList k vs
+
+
+{-| Add a `Maybe` to a key.
+
+If the value is `Nothing`, don't add anything. If the value is `Just
+v`, add `v`.
+
+    > parse "?a=1&b=a&a=c"
+    |   |> addMaybe "a" Nothing
+    |   |> render
+    "?a=1&a=c&b=a" : String
+
+    > parse "?a=1&b=a&a=c"
+    |   |> addMaybe "d" (Just "hello")
+    |   |> render
+    "?a=1&a=c&b=a&d=hello" : String
+
+-}
+addMaybe : String -> Maybe String -> QueryString -> QueryString
+addMaybe k m qs =
+    case m of
+        Nothing ->
+            qs
+
+        Just v ->
+            add k v qs
 
 
 {-| Remove a key.
